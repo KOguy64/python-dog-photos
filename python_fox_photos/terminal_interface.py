@@ -1,11 +1,13 @@
 """terminal_interface: creates a new session: handles all input and output"""
 
+import json
+from json import JSONDecodeError
 from pathlib import Path
 
 import requests as r
-from PIL import UnidentifiedImageError
+from PIL import Image, UnidentifiedImageError
 
-from .api_caller import get_photo_file, get_photo_url
+from .api_caller import OFFLINE_PHOTO, OFFLINE_REPLY, get_photo_file, get_photo_url
 from .fox_note import FoxNote, del_foxnote, load_foxnote, save_foxnote
 from .saveload_manager import ListDir, load_listdir, save_listdir
 from .utils import display_photo
@@ -151,10 +153,12 @@ class Session:
                 self.display_photo()
         except r.ConnectionError:
             print("Got a connection error. Check your internet")
+            self.load_offline_photo()
         except r.Timeout:
             print(
                 "Got a timeout, please check your internet or if the server is still up"
             )
+            self.load_offline_photo()
         except r.HTTPError:
             print("Failed to get link, please check if the server is still working")
         except r.JSONDecodeError:
@@ -167,6 +171,21 @@ class Session:
             )
         except UnidentifiedImageError:
             print("Image couldn't be loaded. Please check that the server is working")
+
+    def load_offline_photo(self):
+        """Load the fox saved in the package, for when there's no internet"""
+        if not (OFFLINE_REPLY.exists() and OFFLINE_PHOTO.exists()):
+            print("No offline fox saved either, sorry!")
+            return
+        try:
+            reply = json.loads(OFFLINE_REPLY.read_text())
+            img = Image.open(OFFLINE_PHOTO)
+            img.load()
+        except (OSError, JSONDecodeError):
+            print("The offline fox is broken, sorry!")
+            return
+        print(f"You're offline, so here's our saved fox: {reply.get(API_JSON_KEY)}")
+        self._current_foxnote = FoxNote(img)
 
     def load_photo(self, name):
         """Call load <name>, load one of your saved foxes by its name"""
