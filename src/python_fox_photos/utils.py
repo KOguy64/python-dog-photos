@@ -1,3 +1,14 @@
+from PIL import Image
+
+
+def is_valid_image(img: Image.Image) -> bool:
+    try:
+        img.load()
+        return True
+    except (OSError, SyntaxError):
+        return False
+
+
 class InvalidPathError(Exception):
 
     def __init__(self, path):

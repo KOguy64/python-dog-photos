@@ -1,0 +1,10 @@
+{
+    "main_dir" : "tests/test_saved_photos",
+    "saved_files" : 
+        {
+            "cute fox" : {
+            "has_metadata" : true,
+            "path" : "test_1"
+            }
+        }
+}

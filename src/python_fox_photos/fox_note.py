@@ -2,15 +2,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from .custom_exceptions import InvalidPathError
-
-
-def is_valid_image(img: Image.Image) -> bool:
-    try:
-        img.load()
-        return True
-    except (OSError, SyntaxError):
-        return False
+from .utils import InvalidPathError
 
 
 class FoxNote:
