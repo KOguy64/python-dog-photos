@@ -10,7 +10,7 @@ from PIL import Image, UnidentifiedImageError
 from .api_caller import OFFLINE_PHOTO, OFFLINE_REPLY, get_photo_file, get_photo_url
 from .fox_note import FoxNote, del_foxnote, load_foxnote, save_foxnote
 from .saveload_manager import ListDir, load_listdir, save_listdir
-from .utils import display_photo
+from .utils import UnsafePathError, display_photo
 
 API_URL = "https://randomfox.ca/floof/"
 API_JSON_KEY = "image"
@@ -193,7 +193,12 @@ class Session:
             print("Sorry, there's no fox with that name!")
             return
         saved_note = self.listdir.saved_files[name]
-        path = self.listdir.resolve_path(Path(saved_note["path"]))
+        try:
+            path = self.listdir.resolve_path(Path(saved_note["path"]))
+        except UnsafePathError:
+            print("Sorry, that fox is outside your fox folder. Deleting the entry...")
+            self.del_photo(name)
+            return
         has_metadata = saved_note["has_metadata"]
 
         self._current_foxnote = load_foxnote(path, name, has_metadata)
@@ -206,7 +211,11 @@ class Session:
             self.name()
 
         path = Path(input(f"Where should I save this in {self.listdir.main_dir}?: "))
-        full_path = self.listdir.resolve_path(path)
+        try:
+            full_path = self.listdir.resolve_path(path)
+        except UnsafePathError:
+            print(f"Sorry, foxes can only be saved inside {self.listdir.main_dir}")
+            return
         save_foxnote(self.current_foxnote, full_path)
         self.listdir.add_file(self.current_foxnote, path)
         self.update_metadata()
@@ -218,7 +227,13 @@ class Session:
             return
         entry = self.listdir.saved_files[name]
         has_metadata = entry["has_metadata"]
-        path = self.listdir.resolve_path(Path(entry["path"]))
+        try:
+            path = self.listdir.resolve_path(Path(entry["path"]))
+        except UnsafePathError:
+            # Never touch files outside main_dir, only forget the entry
+            self.listdir.remove_file(name)
+            self.update_metadata()
+            return
         del_foxnote(path, has_metadata)
         self.listdir.remove_file(name)
         self.update_metadata()
