@@ -1,3 +1,5 @@
+"""terminal_interface: creates a new session: handles all input and output"""
+
 from pathlib import Path
 
 from .api_caller import get_photo_file, get_photo_url
@@ -14,6 +16,7 @@ Getting your daily fox photo...
 
 
 class Session:
+    """Creates a new session that handles all user interaction"""
 
     def __init__(self, listdir_path: str = "listdir.json"):
         self.listdir_path = Path(listdir_path)
@@ -40,6 +43,10 @@ class Session:
         self.exit_sig = False
 
     def help(self, *arg):
+        """
+        If typed alone, help displays all commands and what they do
+        If typed with a <cmd>, such as help display, you get what that command does!
+        """
         if len(arg) == 0:
             print("Here's the list of all commands and what they do...")
             width = max(len(name) for name in self.cmd_map)
@@ -63,6 +70,7 @@ class Session:
 
     @property
     def current_foxnote(self) -> FoxNote:
+        """Tries to get the current fox. If that doesn't exist, get a new one"""
         if not self._current_foxnote:
             print("No fox loaded yet! Getting one for you ...")
             self.get_new_photo()
@@ -70,13 +78,16 @@ class Session:
         return self._current_foxnote
 
     def update_metadata(self):
+        """Update the system's record on what foxes are saved"""
         save_listdir(self.listdir, self.listdir_path)
 
     def display_photo(self):
+        """Display the currently loaded fox"""
         print("Press any key to close the window")
         display_photo(self.current_foxnote.img)
 
     def get_list(self):
+        """Get a list of all saved foxes"""
         if not self.listdir.saved_files:
             print(
                 "No saved foxes found !\nIf you want to get one, type 'get'\nIf you want to save the current one, type 'save'"
@@ -89,12 +100,14 @@ class Session:
         print("If you would like to load one, type 'load <name>'")
 
     def add_note(self):
+        """Add a score and a note to the current fox"""
         print("New note...")
         score = float(input("Score? (0-10, decimals allowed): "))
         note_str = input("Note: ")
         self.current_foxnote.add_metadata(note_str, score)
 
     def name(self):
+        """Give the current fox a name or read it's name!"""
         if self.current_foxnote.name:
             print(f"The fox's name is {self.current_foxnote.name}")
             return
@@ -103,6 +116,7 @@ class Session:
         )
 
     def read_note(self):
+        """Read the current fox's note"""
         if not self.current_foxnote.has_metadata:
             print("Add some notes and scores before you edit it!")
         else:
@@ -110,6 +124,7 @@ class Session:
             print(f"Score: {self.current_foxnote.score}")
 
     def edit_note(self):
+        """Edit the score and note of the current fox"""
         if not self.current_foxnote.has_metadata:
             print("Add some notes and scores before you edit it!")
         else:
@@ -120,6 +135,7 @@ class Session:
             self.add_note()
 
     def get_new_photo(self, api_url=API_URL, api_json_key=API_JSON_KEY):
+        """Get a new photo from the API"""
         print("Getting a new fox...")
         photo_url = get_photo_url(api_url, api_json_key)
         print(f"API reponsded, fetching fox from {photo_url}...")
@@ -131,6 +147,7 @@ class Session:
             self.display_photo()
 
     def load_photo(self, name):
+        """Call load <name>, load one of your saved foxes by its name"""
         if name not in self.listdir.saved_files:
             print("Sorry, there's no fox with that name!")
             return
@@ -142,6 +159,7 @@ class Session:
         print(f"{name} the fox has been loaded!")
 
     def save_photo(self):
+        """Save the current fox to memory, and update the listing"""
         if not self.current_foxnote.name:
             print("Name the current fox before you save it...")
             self.name()
@@ -153,6 +171,7 @@ class Session:
         self.update_metadata()
 
     def del_photo(self, name):
+        """Delete a fox from memory. They'll be sad though."""
         if name not in self.listdir.saved_files:
             print("We don't have that fox saved!")
             return
@@ -164,11 +183,13 @@ class Session:
         self.update_metadata()
 
     def exit(self):
+        """Exit the program (the foxes will miss you !)"""
         self.update_metadata()
         print("Thanks for using python_fox_photos!")
         self.exit_sig = True
 
     def process_cmd(self, cmd: str):
+        """Process an input string and call its command with arguments"""
         print()
         inputs = cmd.split(" ")
         if len(inputs) == 1:
@@ -180,8 +201,11 @@ class Session:
         print("\n-------------------\n")
 
     def start(self):
+        """Start the session"""
         print(welcome_msg)
         self.get_new_photo()
+        print("\n-------------------\n")
+        self.help()
         print("\n-------------------\n")
         while not self.exit_sig:
             self.process_cmd(input("What do you wanna do?\nType a command:"))
