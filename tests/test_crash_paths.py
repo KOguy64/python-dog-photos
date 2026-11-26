@@ -329,3 +329,81 @@ def test_new_fox_does_not_change_offline_copy(session, fake_requests, answer_alw
     session.get_new_photo()
     assert session._current_foxnote is not None
     assert (OFFLINE_REPLY.read_bytes(), OFFLINE_PHOTO.read_bytes()) == before
+
+
+# Path injection
+
+
+ESCAPING_PATHS = [
+    pytest.param("../foxy", id="parent"),
+    pytest.param("../../foxy", id="grandparent"),
+    pytest.param("a/../../foxy", id="sneaky-parent"),
+    pytest.param("..", id="parent-dir"),
+    pytest.param(".", id="main-dir-itself"),
+]
+
+
+@pytest.mark.parametrize("has_metadata", [False, True])
+@pytest.mark.parametrize("path", ESCAPING_PATHS)
+def test_save_refuses_path_outside_main_dir(
+    session, named_fox, answer_always, tmp_path, path, has_metadata
+):
+    if has_metadata:
+        named_fox.add_metadata("cute", 9)
+    before = {p for p in tmp_path.rglob("*") if p.name != "listdir.json"}
+    answer_always(path)
+    session.save_photo()
+    after = {p for p in tmp_path.rglob("*") if p.name != "listdir.json"}
+    assert after == before
+    assert "foxy" not in session.listdir.saved_files
+    assert "foxy" not in load_listdir(session.listdir_path).saved_files
+
+
+def test_save_refuses_absolute_path(session, named_fox, answer_always, tmp_path):
+    target = tmp_path / "outside" / "foxy"
+    target.parent.mkdir()
+    answer_always(str(target))
+    session.save_photo()
+    assert not target.with_suffix(".jpg").exists()
+    assert "foxy" not in session.listdir.saved_files
+
+
+def test_save_inside_main_dir_still_works(session, named_fox, answer_always, tmp_path):
+    answer_always("a/../foxy")
+    session.save_photo()
+    assert (tmp_path / MAIN_DIR / "foxy.jpg").exists()
+    assert "foxy" in session.listdir.saved_files
+
+
+@pytest.mark.parametrize("has_metadata", [False, True])
+def test_del_does_not_touch_files_outside_main_dir(session, tmp_path, has_metadata):
+    victim = tmp_path / "victim"
+    if has_metadata:
+        victim.mkdir()
+        (victim / "image.jpg").write_bytes(b"keep me")
+        (victim / "metadata.json").write_text("{}")
+    else:
+        victim.with_suffix(".jpg").write_bytes(b"keep me")
+    register_fox(session, "evil", "../victim", has_metadata)
+
+    session.del_photo("evil")
+
+    if has_metadata:
+        assert (victim / "image.jpg").exists()
+        assert (victim / "metadata.json").exists()
+    else:
+        assert victim.with_suffix(".jpg").exists()
+    assert "evil" not in session.listdir.saved_files
+    assert "evil" not in load_listdir(session.listdir_path).saved_files
+
+
+def test_load_refuses_entry_outside_main_dir(session, tmp_path):
+    outside = tmp_path / "outside"
+    Image.new("RGB", (16, 16), "orange").save(outside.with_suffix(".jpg"))
+    register_fox(session, "evil", "../outside", False)
+
+    session.load_photo("evil")
+
+    assert session._current_foxnote is None
+    assert outside.with_suffix(".jpg").exists()
+    assert "evil" not in session.listdir.saved_files

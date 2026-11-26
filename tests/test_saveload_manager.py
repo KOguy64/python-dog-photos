@@ -5,6 +5,7 @@ from PIL import Image
 
 from python_fox_photos.fox_note import FoxNote
 from python_fox_photos.saveload_manager import ListDir, load_listdir, save_listdir
+from python_fox_photos.utils import UnsafePathError
 
 LISTDIRJSON_PATH = Path("tests/listdir.json")
 BAD_LISTDIRJSON_PATH = Path("tests/badlistdir.json")
@@ -71,3 +72,49 @@ def test_listdir_creates_missing_main_dir(tmp_path):
     main_dir = tmp_path / "new_dir"
     ListDir(main_dir, {})
     assert main_dir.is_dir()
+
+
+# Path injection
+
+
+UNSAFE_PATHS = [
+    pytest.param("..", id="parent"),
+    pytest.param("../foxy", id="parent-file"),
+    pytest.param("../../foxy", id="grandparent-file"),
+    pytest.param("a/../../foxy", id="sneaky-parent"),
+    pytest.param("a/b/../../../foxy", id="deep-sneaky-parent"),
+    pytest.param("", id="empty"),
+    pytest.param(".", id="main-dir-itself"),
+    pytest.param("a/..", id="back-to-main-dir"),
+    pytest.param("/tmp/foxy", id="absolute"),
+]
+
+
+@pytest.mark.parametrize("path", UNSAFE_PATHS)
+def test_resolve_path_rejects_escaping_paths(tmp_path, path):
+    listdir = ListDir(tmp_path / "main", {})
+    with pytest.raises(UnsafePathError):
+        listdir.resolve_path(Path(path))
+
+
+@pytest.mark.parametrize("path", ["foxy", "a/foxy", "a/../foxy", "./foxy"])
+def test_resolve_path_accepts_paths_inside_main_dir(tmp_path, path):
+    listdir = ListDir(tmp_path / "main", {})
+    resolved = listdir.resolve_path(Path(path))
+    assert resolved.is_relative_to((tmp_path / "main").resolve())
+
+
+def test_resolve_path_rejects_symlink_out_of_main_dir(tmp_path):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    listdir = ListDir(tmp_path / "main", {})
+    (tmp_path / "main" / "link").symlink_to(outside, target_is_directory=True)
+    with pytest.raises(UnsafePathError):
+        listdir.resolve_path(Path("link/foxy"))
+
+
+def test_resolve_path_rejects_prefix_sibling(tmp_path):
+    # "main_evil" starts with "main" but is not inside it
+    listdir = ListDir(tmp_path / "main", {})
+    with pytest.raises(UnsafePathError):
+        listdir.resolve_path(Path("../main_evil/foxy"))
