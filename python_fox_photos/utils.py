@@ -75,3 +75,12 @@ class MetadataError(Exception):
     def __init__(self):
         self.message = "Metadata does not exist yet ! Add metadata to this fox first."
         super().__init__(self.message)
+
+
+class UnsafePathError(Exception):
+    """Raises if a path would escape the main storage directory"""
+
+    def __init__(self, path):
+        self.path = path
+        self.message = f"{path} is outside the storage directory !"
+        super().__init__(self.message)

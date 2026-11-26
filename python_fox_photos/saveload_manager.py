@@ -4,7 +4,7 @@ import copy
 import json
 from pathlib import Path
 
-from python_fox_photos.utils import InvalidPathError
+from python_fox_photos.utils import InvalidPathError, UnsafePathError
 
 from .fox_note import FoxNote
 
@@ -32,6 +32,14 @@ class ListDir:
             self._main_dir = str(path)
         else:
             raise InvalidPathError(path)
+
+    def resolve_path(self, path: Path) -> Path:
+        """Join path onto main_dir, raising UnsafePathError if it escapes main_dir"""
+        main_dir = Path(self.main_dir).resolve()
+        full_path = (main_dir / path).resolve()
+        if full_path == main_dir or not full_path.is_relative_to(main_dir):
+            raise UnsafePathError(path)
+        return full_path
 
     def add_file(self, note: FoxNote, path: Path) -> None:
         """Add a file to the listing"""
