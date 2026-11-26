@@ -2,6 +2,9 @@
 
 from pathlib import Path
 
+import requests as r
+from PIL import UnidentifiedImageError
+
 from .api_caller import get_photo_file, get_photo_url
 from .fox_note import FoxNote, del_foxnote, load_foxnote, save_foxnote
 from .saveload_manager import ListDir, load_listdir, save_listdir
@@ -137,14 +140,33 @@ class Session:
     def get_new_photo(self, api_url=API_URL, api_json_key=API_JSON_KEY):
         """Get a new photo from the API"""
         print("Getting a new fox...")
-        photo_url = get_photo_url(api_url, api_json_key)
-        print(f"API reponsded, fetching fox from {photo_url}...")
-        photo_file = get_photo_file(photo_url)
-        print("Fox gotten!")
-        self._current_foxnote = FoxNote(photo_file)
+        try:
+            photo_url = get_photo_url(api_url, api_json_key)
+            print(f"API reponsded, fetching fox from {photo_url}...")
+            photo_file = get_photo_file(photo_url)
+            print("Fox gotten!")
+            self._current_foxnote = FoxNote(photo_file)
 
-        if input("If you would like to display it, type y: ") == "y":
-            self.display_photo()
+            if input("If you would like to display it, type y: ") == "y":
+                self.display_photo()
+        except r.ConnectionError:
+            print("Got a connection error. Check your internet")
+        except r.Timeout:
+            print(
+                "Got a timeout, please check your internet or if the server is still up"
+            )
+        except r.HTTPError:
+            print("Failed to get link, please check if the server is still working")
+        except r.JSONDecodeError:
+            print(
+                "Couldn't decode to json, please check that the server is still working"
+            )
+        except KeyError:
+            print(
+                "Couldn't find the key to get the url in the json. Please check that the API you're calling and key is correct"
+            )
+        except UnidentifiedImageError:
+            print("Image couldn't be loaded. Please check that the server is working")
 
     def load_photo(self, name):
         """Call load <name>, load one of your saved foxes by its name"""
