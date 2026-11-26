@@ -1,6 +1,7 @@
 """terminal_interface: creates a new session: handles all input and output"""
 
 import json
+from functools import wraps
 from json import JSONDecodeError
 from pathlib import Path
 
@@ -18,6 +19,24 @@ API_JSON_KEY = "image"
 welcome_msg = """Welcome to python_fox_photos !
 Getting your daily fox photo...
 """
+
+
+def arg_num(*allowed):
+    """Creates a decorator to check if a function is getting the correct amount of arguments"""
+
+    def decorator(func):
+        @wraps(func)
+        def protected(self, *args):
+            if len(args) not in allowed:
+                print(
+                    f"Sorry ! {func.__name__} only accepts {' or '.join([str(n) for n in allowed])} arguments."
+                )
+                return
+            return func(self, *args)
+
+        return protected
+
+    return decorator
 
 
 class Session:
@@ -47,6 +66,7 @@ class Session:
         }
         self.exit_sig = False
 
+    @arg_num(0, 1)
     def help(self, *arg):
         """
         If typed alone, help displays all commands and what they do
@@ -86,11 +106,13 @@ class Session:
         """Update the system's record on what foxes are saved"""
         save_listdir(self.listdir, self.listdir_path)
 
+    @arg_num(0)
     def display_photo(self):
         """Display the currently loaded fox"""
         print("Press any key to close the window")
         display_photo(self.current_foxnote.img)
 
+    @arg_num(0)
     def get_list(self):
         """Get a list of all saved foxes"""
         if not self.listdir.saved_files:
@@ -104,6 +126,7 @@ class Session:
         print(out)
         print("If you would like to load one, type 'load <name>'")
 
+    @arg_num(0)
     def add_note(self):
         """Add a score and a note to the current fox"""
         print("New note...")
@@ -111,6 +134,7 @@ class Session:
         note_str = input("Note: ")
         self.current_foxnote.add_metadata(note_str, score)
 
+    @arg_num(0)
     def name(self):
         """Give the current fox a name or read it's name!"""
         if self.current_foxnote.name:
@@ -120,6 +144,7 @@ class Session:
             "Warning! Foxs' names can't be changed\nName the current fox: "
         )
 
+    @arg_num(0)
     def read_note(self):
         """Read the current fox's note"""
         if not self.current_foxnote.has_metadata:
@@ -128,6 +153,7 @@ class Session:
             print(f"Note: {self.current_foxnote.note}")
             print(f"Score: {self.current_foxnote.score}")
 
+    @arg_num(0)
     def edit_note(self):
         """Edit the score and note of the current fox"""
         if not self.current_foxnote.has_metadata:
@@ -139,6 +165,7 @@ class Session:
             print()
             self.add_note()
 
+    @arg_num(0)
     def get_new_photo(self, api_url=API_URL, api_json_key=API_JSON_KEY):
         """Get a new photo from the API"""
         print("Getting a new fox...")
@@ -187,6 +214,7 @@ class Session:
         print(f"You're offline, so here's our saved fox: {reply.get(API_JSON_KEY)}")
         self._current_foxnote = FoxNote(img)
 
+    @arg_num(1)
     def load_photo(self, name):
         """Call load <name>, load one of your saved foxes by its name"""
         if name not in self.listdir.saved_files:
@@ -204,6 +232,7 @@ class Session:
         self._current_foxnote = load_foxnote(path, name, has_metadata)
         print(f"{name} the fox has been loaded!")
 
+    @arg_num(0)
     def save_photo(self):
         """Save the current fox to memory, and update the listing"""
         if not self.current_foxnote.name:
@@ -220,6 +249,7 @@ class Session:
         self.listdir.add_file(self.current_foxnote, path)
         self.update_metadata()
 
+    @arg_num(1)
     def del_photo(self, name):
         """Delete a fox from memory. They'll be sad though."""
         if name not in self.listdir.saved_files:
@@ -238,6 +268,7 @@ class Session:
         self.listdir.remove_file(name)
         self.update_metadata()
 
+    @arg_num(0)
     def exit(self):
         """Exit the program (the foxes will miss you !)"""
         self.update_metadata()
