@@ -1,6 +1,7 @@
 """terminal_interface: creates a new session: handles all input and output"""
 
 import json
+import tkinter as tk
 from functools import wraps
 from json import JSONDecodeError
 from pathlib import Path
@@ -11,7 +12,7 @@ from PIL import Image, UnidentifiedImageError
 from .api_caller import OFFLINE_PHOTO, OFFLINE_REPLY, get_photo_file, get_photo_url
 from .fox_note import FoxNote, del_foxnote, load_foxnote, save_foxnote
 from .saveload_manager import ListDir, load_listdir, save_listdir
-from .utils import UnsafePathError, display_photo
+from .utils import ScoreError, UnsafePathError, display_photo
 
 API_URL = "https://randomfox.ca/floof/"
 API_JSON_KEY = "image"
@@ -120,8 +121,11 @@ class Session:
     @arg_num(0)
     def display_photo(self):
         """Display the currently loaded fox"""
-        print("Press any key to close the window")
-        display_photo(self.current_foxnote.img)
+        try:
+            print("Press any key to close the window")
+            display_photo(self.current_foxnote.img)
+        except tk.TclError:
+            print("Couldn't open a window to show the fox (no screen found)")
 
     @arg_num(0)
     def get_list(self):
@@ -141,9 +145,15 @@ class Session:
     def add_note(self):
         """Add a score and a note to the current fox"""
         print("New note...")
-        score = float(input("Score? (0-10, decimals allowed): "))
-        note_str = input("Note: ")
-        self.current_foxnote.add_metadata(note_str, score)
+        while True:
+            try:
+                score = float(input("Score? (0-10, decimals allowed): "))
+                note_str = input("Note: ")
+                self.current_foxnote.add_metadata(note_str, score)
+            except (ValueError, ScoreError):
+                print("Please give a score between 0 - 10. Try again!")
+            else:
+                break
 
     @arg_num(0)
     def name(self):
