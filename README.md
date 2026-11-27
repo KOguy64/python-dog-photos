@@ -64,35 +64,69 @@ python main.py
 ```
 
 Check your Python version with `python3 --version`. If it's older than 3.12,
-install a newer one (for example `sudo apt install python3.12 python3.12-venv`
-and use `python3.12 -m venv .venv`), or use uv below, which downloads the
-right version for you.
+see [If your Python is too old](#if-your-python-is-too-old).
 
 ### With uv (any system)
 
 ```bash
+git clone https://github.com/KOguy64/python-fox-photos.git
+cd python-fox-photos
 uv sync
 uv run python main.py
 ```
 
-First install tkinter and venv support with your package manager:
+On Linux, install tkinter first as described in [Linux](#linux).
 
-| Distro          | Command                                    |
-| --------------- | ------------------------------------------ |
-| Debian / Ubuntu | `sudo apt install python3-tk python3-venv` |
-| Fedora          | `sudo dnf install python3-tkinter`         |
-| Arch            | `sudo pacman -S tk`                        |
+### If your Python is too old
 
-Then:
+If the program says it needs Python 3.12, or crashes with
+`TypeError: unsupported operand type(s) for |`, your venv was made with an
+older Python. A venv can't be upgraded to a new Python version, so install a
+newer Python and make a fresh venv with it.
+
+First install Python 3.12 or newer:
+
+| System          | How                                                                     |
+| --------------- | ----------------------------------------------------------------------- |
+| Windows         | Installer from [python.org](https://www.python.org/downloads/)          |
+| macOS           | Installer from [python.org](https://www.python.org/downloads/), or `brew install python@3.12 python-tk@3.12` |
+| Debian / Ubuntu | `sudo apt install python3.12 python3.12-venv python3.12-tk`             |
+| Fedora          | `sudo dnf install python3.12 python3-tkinter`                           |
+| Arch            | Usually new enough already, check with `python --version`               |
+
+On older Ubuntu releases without a `python3.12` package, add the deadsnakes
+PPA first: `sudo add-apt-repository ppa:deadsnakes/ppa && sudo apt update`.
+
+Then, from the project folder, delete the old venv and make a new one. Name
+the version when you create it, since plain `python3` may still be the old
+one.
+
+macOS and Linux:
 
 ```bash
-git clone https://github.com/KOguy64/python-fox-photos.git
-cd python-fox-photos
-python3 -m venv .venv
+deactivate 2>/dev/null
+rm -rf .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
+python --version
 pip install -r requirements.txt
 python main.py
 ```
+
+Windows:
+
+```powershell
+deactivate
+Remove-Item -Recurse -Force .venv
+py -3.12 -m venv .venv
+.venv\Scripts\activate
+python --version
+pip install -r requirements.txt
+python main.py
+```
+
+`python --version` should now say 3.12 or newer. You can also skip all this
+and use [uv](#with-uv-any-system), which downloads the right Python for you.
 
 ## Commands
 
