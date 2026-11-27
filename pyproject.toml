@@ -11,11 +11,12 @@ dependencies = [
     "pillow>=13.0.0",
     "pytest>=9.2.0",
     "requests>=2.34.2",
+    "ruff>=0.17.6",
 ]
-
-[project.scripts]
-python-dog-photos = "python_fox_photos:main"
 
 [build-system]
 requires = ["uv_build>=0.12.8,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
