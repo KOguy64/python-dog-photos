@@ -266,7 +266,11 @@ class Session:
         except UnsafePathError:
             print(f"Sorry, foxes can only be saved inside {self.listdir.main_dir}")
             return
-        save_foxnote(self.current_foxnote, full_path)
+        try:
+            save_foxnote(self.current_foxnote, full_path)
+        except OSError as e:
+            print(f"Couldn't save the fox there: {e}")
+            return
         self.listdir.add_file(self.current_foxnote, path)
         self.update_metadata()
 
@@ -285,9 +289,14 @@ class Session:
             self.listdir.remove_file(name)
             self.update_metadata()
             return
-        del_foxnote(path, has_metadata)
-        self.listdir.remove_file(name)
-        self.update_metadata()
+        try:
+            del_foxnote(path, has_metadata)
+            self.listdir.remove_file(name)
+            self.update_metadata()
+        except OSError:
+            print(
+                f"This fox has extra files?! Delete them manually in {self.listdir.main_dir}"
+            )
 
     @arg_num(0)
     def exit(self):
