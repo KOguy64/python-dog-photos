@@ -48,7 +48,13 @@ class Session:
             self.listdir = ListDir(Path("files"), {})
             self.update_metadata()
         else:
-            self.listdir = load_listdir(self.listdir_path)
+            try:
+                self.listdir = load_listdir(self.listdir_path)
+            except (ValueError, KeyError, TypeError):
+                print(
+                    "Current listdir is not a broken. Starting with empty list of foxes"
+                )
+                self.listdir = ListDir(Path("files"), {})
         self._current_foxnote: FoxNote | None = None
         self.cmd_map = {
             "get": self.get_new_photo,
@@ -104,7 +110,12 @@ class Session:
 
     def update_metadata(self):
         """Update the system's record on what foxes are saved"""
-        save_listdir(self.listdir, self.listdir_path)
+        try:
+            save_listdir(self.listdir, self.listdir_path)
+        except OSError:
+            print(
+                "Couldn't save the list of foxes to the system. Check your permissions!"
+            )
 
     @arg_num(0)
     def display_photo(self):
