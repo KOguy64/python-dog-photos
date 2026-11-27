@@ -59,3 +59,18 @@ or `help <command>` for one.
 
 Saved foxes go into the `files/` folder, and the list of them is kept in
 `listdir.json`. Both are created on the first run.
+
+## Tests and linting
+
+With the virtual environment active:
+
+```bash
+python -m pytest
+python -m ruff check .
+```
+
+The tests in `tests/test_api_caller.py` call the real API, so they need an
+internet connection.
+
+To replace the saved offline fox, delete `python_fox_photos/offline/` and run
+`python -m python_fox_photos.api_caller`.
