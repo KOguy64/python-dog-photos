@@ -12,7 +12,13 @@ from PIL import Image, UnidentifiedImageError
 from .api_caller import OFFLINE_PHOTO, OFFLINE_REPLY, get_photo_file, get_photo_url
 from .fox_note import FoxNote, del_foxnote, load_foxnote, save_foxnote
 from .saveload_manager import ListDir, load_listdir, save_listdir
-from .utils import ScoreError, UnsafePathError, display_photo
+from .utils import (
+    InvalidImgError,
+    InvalidPathError,
+    ScoreError,
+    UnsafePathError,
+    display_photo,
+)
 
 API_URL = "https://randomfox.ca/floof/"
 API_JSON_KEY = "image"
@@ -250,8 +256,22 @@ class Session:
             return
         has_metadata = saved_note["has_metadata"]
 
-        self._current_foxnote = load_foxnote(path, name, has_metadata)
-        print(f"{name} the fox has been loaded!")
+        try:
+            self._current_foxnote = load_foxnote(path, name, has_metadata)
+            print(f"{name} the fox has been loaded!")
+        except InvalidPathError:
+            print("Sorry, we can't find that fox! Deleting the entry for you...")
+            self.del_photo(name)
+        except (
+            UnidentifiedImageError,
+            ValueError,
+            KeyError,
+            InvalidImgError,
+            ScoreError,
+            TypeError,
+        ):
+            print("Sorry, but that fox is corrupted. Deleting the entry for you...")
+            self.del_photo(name)
 
     @arg_num(0)
     def save_photo(self):
@@ -309,23 +329,34 @@ class Session:
         """Process an input string and call its command with arguments"""
         print()
         inputs = cmd.split(" ")
-        if len(inputs) == 1:
-            command = inputs[0]
-            self.cmd_map[command]()
-        else:
-            command, *arg = inputs
-            self.cmd_map[command](*arg)
+        try:
+            if len(inputs) == 1:
+                command = inputs[0]
+                self.cmd_map[command]()
+            else:
+                command, *arg = inputs
+                self.cmd_map[command](*arg)
+        except (KeyboardInterrupt, EOFError):
+            print("Cancelled")
+        except KeyError:
+            print(
+                f"Can't parse {cmd!r}.\nType 'help' to get a list of all commands\nPlease try again..."
+            )
         print("\n-------------------\n")
 
     def start(self):
         """Start the session"""
-        print(welcome_msg)
-        self.get_new_photo()
-        print("\n-------------------\n")
-        self.help()
-        print("\n-------------------\n")
-        while not self.exit_sig:
-            self.process_cmd(input("What do you wanna do?\nType a command:"))
+        try:
+            print(welcome_msg)
+            self.get_new_photo()
+            print("\n-------------------\n")
+            self.help()
+            print("\n-------------------\n")
+            while not self.exit_sig:
+                self.process_cmd(input("What do you wanna do?\nType a command:"))
+        except (KeyboardInterrupt, EOFError):
+            print()
+            self.exit()
 
 
 if __name__ == "__main__":
